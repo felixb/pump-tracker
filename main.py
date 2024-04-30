@@ -2,7 +2,6 @@
 
 import os
 import sys
-from dataclasses import dataclass
 
 import gpxpy
 import gpxpy.gpx
@@ -33,14 +32,14 @@ def import_files(path):
             os.rename(fn, new_fn)
 
 
-@dataclass(frozen=False)
 class Run:
-    first_point = None
-    last_point = None
-    last_speed = None
-    max_speed = 0
-    cum_dist = 0
-    gpx_segment = gpxpy.gpx.GPXTrackSegment()
+    def __init__(self):
+        self.first_point = None
+        self.last_point = None
+        self.last_speed = None
+        self.max_speed = 0
+        self.cum_dist = 0
+        self.gpx_segment = gpxpy.gpx.GPXTrackSegment()
 
     def update_stats(self, speed, dist):
         self.last_speed = speed
@@ -48,7 +47,7 @@ class Run:
         self.cum_dist += dist
 
     def duration(self):
-        return (self.last_point.time - self.first_point.time).total_seconds()
+        return self.gpx_segment.get_duration()
 
 
 def __step_stats(p0, p1):
@@ -85,11 +84,10 @@ def analyse(fn):
     """
     gpx = __load(fn)
     runs = []
+    run = Run()
 
     for track in gpx.tracks:
         for segment in track.segments:
-            run = Run()
-
             for point in segment.points:
                 if run.last_point:
                     dist, time_spent, speed = __step_stats(run.last_point, point)
