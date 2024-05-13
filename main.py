@@ -78,6 +78,11 @@ def __best_run_to_gpx(run):
     return gpx
 
 
+def __print_run(id, run):
+    print(
+        f'{id}: {run.duration()}s {round(run.cum_dist)}m {round(float(run.cum_dist * 60 * 60) / 1000 / run.duration(), 1)}km/h')
+
+
 def analyse(fn):
     """
     Analyse .gpx file.
@@ -109,8 +114,8 @@ def analyse(fn):
     avg_duration = round(sum(r.duration() for r in runs) / len(runs))
     avg_distance = round(sum(r.cum_dist for r in runs) / len(runs))
     for i, run in enumerate(runs):
-        print(f'{(i + 1):02}: {run.duration()}s {round(run.cum_dist)}m')
-    print(f'best run: {best_run.duration()}s {round(best_run.cum_dist)}m')
+        __print_run(f'{(i + 1):02}', run)
+    __print_run('best run', best_run)
     print(f'avg duration: {avg_duration}s')
     print(f'avg distance: {avg_distance}m')
     best_gpx = __best_run_to_gpx(best_run)
