@@ -46,6 +46,13 @@ class Run:
         self.max_speed = max(self.max_speed, speed)
         self.cum_dist += dist
 
+    def append(self, run):
+        self.last_point = run.last_point
+        self.last_speed = run.last_speed
+        self.max_speed = max(self.max_speed, run.max_speed)
+        self.gpx_segment.points += run.gpx_segment.points
+        self.cum_dist = self.gpx_segment.length_2d()
+
     def duration(self):
         return self.gpx_segment.get_duration()
 
@@ -57,8 +64,22 @@ def __step_stats(p0, p1):
     return dist, time_spent, speed
 
 
-def __all_runs_to_gpx(runs):
+def __new_gpx(base_gpx=None, time=None):
     gpx = gpxpy.gpx.GPX()
+    gpx.nsmap = base_gpx.nsmap
+    gpx.schema_locations = gpx.schema_locations
+    gpx.waypoints = base_gpx.waypoints
+    gpx.description = "pump foiling ftw"
+    if time:
+        gpx.time = time
+    else:
+        gpx.time = base_gpx.time
+    gpx.creator = "pump tracker - https://github.com/felixb/pump-tracker"
+    return gpx
+
+
+def __all_runs_to_gpx(base_gpx, runs):
+    gpx = __new_gpx(base_gpx, runs[0].first_point.time)
     for r in runs:
         t = gpxpy.gpx.GPXTrack()
         t.segments.append(r.gpx_segment)
@@ -70,8 +91,8 @@ def __get_best_run(runs):
     return sorted(runs, key=lambda r: r.duration(), reverse=True)[0]
 
 
-def __best_run_to_gpx(run):
-    gpx = gpxpy.gpx.GPX()
+def __best_run_to_gpx(base_gpx, run):
+    gpx = __new_gpx(base_gpx, run.first_point.time)
     t = gpxpy.gpx.GPXTrack()
     t.segments.append(run.gpx_segment)
     gpx.tracks.append(t)
@@ -79,8 +100,9 @@ def __best_run_to_gpx(run):
 
 
 def __print_run(id, run):
+    speed = float(run.cum_dist * 60 * 60) / 1000 / run.duration()
     print(
-        f'{id}: {run.duration()}s {round(run.cum_dist)}m {round(float(run.cum_dist * 60 * 60) / 1000 / run.duration(), 1)}km/h')
+        f'{id} {run.first_point.time:%H:%M:%S}-{run.last_point.time:%H:%M:%S} : {run.duration()}s {round(run.cum_dist)}m {round(speed, 1)}km/h')
 
 
 def analyse(fn):
@@ -97,19 +119,22 @@ def analyse(fn):
                 if run.last_point:
                     dist, time_spent, speed = __step_stats(run.last_point, point)
 
-                    if speed > 5:
+                    if speed > 5 and time_spent.seconds < 10:
                         if not run.last_speed:
                             run.first_point = point
                         run.update_stats(speed, dist)
                         run.gpx_segment.points.append(point)
                     else:
                         if run.first_point:
-                            if run.cum_dist > 10 and run.max_speed > 10:
-                                runs.append(run)
+                            if run.cum_dist > 10 and run.max_speed > 10 and run.duration() > 3:
+                                if runs and (run.first_point.time - runs[-1].last_point.time).seconds < 10:
+                                    runs[-1].append(run)
+                                else:
+                                    runs.append(run)
                         run = Run()
                 run.last_point = point
 
-    all_gpx = __all_runs_to_gpx(runs)
+    all_gpx = __all_runs_to_gpx(gpx, runs)
     best_run = __get_best_run(runs)
     avg_duration = round(sum(r.duration() for r in runs) / len(runs))
     avg_distance = round(sum(r.cum_dist for r in runs) / len(runs))
@@ -118,7 +143,7 @@ def analyse(fn):
     __print_run('best run', best_run)
     print(f'avg duration: {avg_duration}s')
     print(f'avg distance: {avg_distance}m')
-    best_gpx = __best_run_to_gpx(best_run)
+    best_gpx = __best_run_to_gpx(gpx, best_run)
     __save(fn.replace('.gpx', '-all.gpx').replace('-raw-', '-'), all_gpx)
     __save(fn.replace('.gpx', '-best.gpx').replace('-raw-', '-'), best_gpx)
 
