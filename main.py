@@ -119,7 +119,7 @@ def analyse(fn):
                 if run.last_point:
                     dist, time_spent, speed = __step_stats(run.last_point, point)
 
-                    if speed > 5 and time_spent.seconds < 10:
+                    if speed > 7 and time_spent.seconds < 10:
                         if not run.last_speed:
                             run.first_point = point
                         run.update_stats(speed, dist)
