@@ -135,7 +135,8 @@ def analyse(fn):
 
                     if speed > 7 and time_spent.seconds < 10:
                         if not run.last_speed:
-                            run.first_point = point
+                            run.first_point = run.last_point
+                            run.gpx_segment.points.append(run.last_point)
                         run.update_stats(speed, dist)
                         run.gpx_segment.points.append(point)
                     else:
