@@ -99,10 +99,24 @@ def __best_run_to_gpx(base_gpx, run):
     return gpx
 
 
+def __printable_duration(s):
+    hours = int(s // 3600)
+    minutes = int((s % 3600) // 60)
+    seconds = int(s % 60)
+    parts = []
+    if hours:
+        parts.append(f'{hours}h')
+    if minutes:
+        parts.append(f'{minutes}m')
+    if seconds:
+        parts.append(f'{seconds}s')
+    return ''.join(parts)
+
+
 def __print_run(id, run):
     speed = float(run.cum_dist * 60 * 60) / 1000 / run.duration()
     print(
-        f'{id} {run.first_point.time:%H:%M:%S}-{run.last_point.time:%H:%M:%S} : {run.duration()}s {round(run.cum_dist)}m {round(speed, 1)}km/h')
+        f'{id} {run.first_point.time:%H:%M:%S}-{run.last_point.time:%H:%M:%S} : {__printable_duration(run.duration())} {round(run.cum_dist)}m {round(speed, 1)}km/h')
 
 
 def analyse(fn):
@@ -141,7 +155,7 @@ def analyse(fn):
     for i, run in enumerate(runs):
         __print_run(f'{(i + 1):02}', run)
     __print_run('best run', best_run)
-    print(f'avg duration: {avg_duration}s')
+    print(f'avg duration: {__printable_duration(avg_duration)}')
     print(f'avg distance: {avg_distance}m')
     best_gpx = __best_run_to_gpx(gpx, best_run)
     __save(fn.replace('.gpx', '-all.gpx').replace('-raw-', '-'), all_gpx)
