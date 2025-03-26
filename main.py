@@ -88,7 +88,7 @@ def __all_runs_to_gpx(base_gpx, runs):
 
 
 def __get_best_run(runs):
-    return sorted(runs, key=lambda r: r.duration(), reverse=True)[0]
+    return sorted(runs, key=lambda r: (r.duration(), r.cum_dist), reverse=True)[0]
 
 
 def __best_run_to_gpx(base_gpx, run):
