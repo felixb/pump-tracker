@@ -5,7 +5,13 @@ import sys
 
 import gpxpy
 import gpxpy.gpx
+import staticmap
 from geopy.distance import geodesic
+
+SPEED_BUCKET_COLORS = ['#fffafa', '#ffebeb', '#ffdbdb', '#ffcccc', '#ffbdbd', '#ffadad', '#ff9e9e',
+                       '#ff8f8f', '#ff8080', '#ff7070', '#ff6161', '#ff5252', '#ff4242', '#ff3333',
+                       '#ff2424', '#ff1414', '#ff0f0f', '#ff0a0a', ]
+SPEED_BUCKETS = [10 + i for i in range(len(SPEED_BUCKET_COLORS))]
 
 
 def __load(fn):
@@ -16,6 +22,24 @@ def __load(fn):
 def __save(fn, gpx):
     with open(fn, 'w') as fp:
         fp.write(gpx.to_xml())
+
+
+def __save_png(fn, run):
+    m = staticmap.StaticMap(1024, 1024, 1, 1)
+    for i in range(len(run.gpx_segment.points) - 1):
+        first = run.gpx_segment.points[i]
+        second = run.gpx_segment.points[i + 1]
+        if second.speed > SPEED_BUCKETS[-1]:
+            color = SPEED_BUCKET_COLORS[-1]
+        else:
+            color = None
+            for i, limit in enumerate(SPEED_BUCKETS):
+                if second.speed < limit:
+                    break
+                color = SPEED_BUCKET_COLORS[i]
+        m.add_line(
+            staticmap.Line([[first.longitude, first.latitude], [second.longitude, second.latitude]], color, 2, True))
+    m.render().save(fn)
 
 
 def import_files(path):
@@ -132,6 +156,7 @@ def analyse(fn):
             for point in segment.points:
                 if run.last_point:
                     dist, time_spent, speed = __step_stats(run.last_point, point)
+                    point.speed = speed
 
                     if speed > 7 and time_spent.seconds < 10:
                         if not run.last_speed:
@@ -161,6 +186,8 @@ def analyse(fn):
     best_gpx = __best_run_to_gpx(gpx, best_run)
     __save(fn.replace('.gpx', '-all.gpx').replace('-raw-', '-'), all_gpx)
     __save(fn.replace('.gpx', '-best.gpx').replace('-raw-', '-'), best_gpx)
+    for i, run in enumerate(runs):
+        __save_png(fn.replace('.gpx', f'-{(i + 1):02}.png').replace('-raw-', '-'), run)
 
 
 if __name__ == '__main__':
